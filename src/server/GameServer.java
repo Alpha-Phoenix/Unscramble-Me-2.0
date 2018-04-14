@@ -44,7 +44,7 @@ public class GameServer implements Runnable {
     private HashSet<Socket> clientsSockets;
 
     private GameServer() {
-        this.clientsSockets = new HashSet<>();
+        clientsSockets = new HashSet<>();
     }
 
     /**
@@ -62,9 +62,7 @@ public class GameServer implements Runnable {
     @Override
     public void run() {
         Scanner s = new Scanner(System.in);
-        while (s.hasNext())
-            s.nextLine();
-
+        while (s.hasNext()) s.nextLine();
         shutdown();
     }
 
@@ -74,16 +72,15 @@ public class GameServer implements Runnable {
     public void start () {
         try {
             LOGGER.log(Level.INFO, "Trying to start the server...\n");
-            this.serverSocket = new ServerSocket(this.port);
+            serverSocket = new ServerSocket(this.port);
             final String ip = InetAddress.getLocalHost().getHostAddress();
-            LOGGER.log(Level.INFO, "Server started!\n\tPort: {0}\n\t  IP: {1}\n", new Object[] {this.port, ip});
+            LOGGER.log(Level.INFO, "Server started!\n\tPort: {0}\n\t  IP: {1}\n", new Object[] {port, ip});
             LOGGER.log(Level.INFO, "Press Ctrl-D to shutdown the server!\n");
+            waitForConnections();
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Failed to initialize the server!\n", e.getMessage());
+            LOGGER.log(Level.SEVERE, "Failed to initialize the server! {0}\n", e.getMessage());
             e.printStackTrace();
         }
-
-        waitForConnections();
     }
 
     /**
@@ -95,23 +92,26 @@ public class GameServer implements Runnable {
         try {
             //noinspection InfiniteLoopStatement
             while (true) {
-                Socket userSocket = this.serverSocket.accept();
-                LOGGER.log(Level.INFO, "New user connected!\n");
-                allocateClient(userSocket);
+                Socket clientSocket = serverSocket.accept();
+                LOGGER.log(Level.INFO, "New client connected! {0}\n", clientSocket);
+                clientSocket.getOutputStream().write("You're now connected to the server\n".getBytes());
+                clientSocket.getOutputStream().flush();
+                allocateClient(clientSocket);
             }
         } catch (IOException e) {
-            // The user socket was closed by the shutdown method, so, no need for printing the stack trace.
-            //e.printStackTrace();
+            // No need for printing stacktrace if the serverSocket was closed by the shutdown method
+            if (!serverSocket.isClosed())
+                e.printStackTrace();
         }
     }
 
     /**
-     * This method is responsible to delegate the communication with the user to the {@link ClientListener}.
-     * @param userSocket the user socket to delegate.
+     * This method is responsible to delegate the communication with the client to the {@link ClientListener}.
+     * @param clientSocket the client socket to delegate.
      * */
-    private void allocateClient(@NotNull Socket userSocket) {
-        clientsSockets.add(userSocket);
-        new Thread(new ClientListener(userSocket, this)).start();
+    private void allocateClient(@NotNull Socket clientSocket) {
+        clientsSockets.add(clientSocket);
+        new Thread(new ClientListener(clientSocket, this)).start();
     }
 
     /**
@@ -122,14 +122,13 @@ public class GameServer implements Runnable {
             LOGGER.log(Level.INFO, "Trying to shutdown the server...\n");
 
             // TODO Clear resources
-            for (Socket soc : this.clientsSockets)
-                removeClient(soc);
+            for (Socket soc : clientsSockets) removeClient(soc);
 
             serverSocket.close();
 
             LOGGER.log(Level.INFO, "Server successfully shut down!\n");
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Failed to shutdown the server!\n", e.getMessage());
+            LOGGER.log(Level.SEVERE, "Failed to shutdown the server! {0}\n", e.getMessage());
             e.printStackTrace();
         }
     }
@@ -140,7 +139,7 @@ public class GameServer implements Runnable {
      * @param clientSocket the socket of the client that will receive the message
      * */
     private void sendMessage (@NotNull Object message, @NotNull Socket clientSocket) {
-        try (PrintWriter writer = new PrintWriter(clientSocket.getOutputStream())) {
+        try (PrintWriter writer = new PrintWriter(clientSocket.getOutputStream(), true)) {
             writer.println(message);
         } catch (IOException e) {
             e.printStackTrace();
@@ -153,10 +152,10 @@ public class GameServer implements Runnable {
      * @param excludedClient    the client that won't receive the message.
      * */
     void broadcast (@NotNull Object message, @NotNull Socket excludedClient) {
-        for (Socket client : this.clientsSockets) {
+        for (Socket client : clientsSockets) {
             if (excludedClient == client)
                 continue;
-            this.sendMessage(message, client);
+            sendMessage(message, client);
         }
     }
 
@@ -167,8 +166,9 @@ public class GameServer implements Runnable {
     void removeClient (@NotNull Socket clientSocket) {
         try {
             clientSocket.close();
-            this.clientsSockets.remove(clientSocket);
-            // TODO broadcast the user disconnection
+            clientsSockets.remove(clientSocket);
+            LOGGER.log(Level.INFO, "Client removed! {0}\n", clientSocket);
+            // TODO broadcast the client disconnection
         } catch (IOException e) {
             e.printStackTrace();
         }

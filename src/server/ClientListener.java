@@ -13,7 +13,7 @@ import java.util.logging.Logger;
  * @author      Michael Pacheco <b>pacheco@decom.ufop.br</b>
  * @version     1.0
  *
- * This class is responsible to listen messages of a single user and send them to the server and then to the other clients.
+ * This class is responsible to listen messages of a single client and send them to the server and then to the other clients.
  * */
 public class ClientListener implements Runnable {
     /**
@@ -48,17 +48,20 @@ public class ClientListener implements Runnable {
      * */
     @Override
     public void run() {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(this.clientSocket.getInputStream()))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
             String message;
             while ((message = reader.readLine()) != null) {
-                // TODO send received message to the server
-                LOGGER.log(Level.INFO, "Message received!");
+                // send received message to the server
+                LOGGER.log(Level.INFO, "Message received!\n\t   From: {0}\n\tMessage: {1}\n",
+                        new Object[]{clientSocket, message});
                 server.broadcast(message, clientSocket);
             }
-            // TODO send the client to server to be disconnected
-            server.removeClient(this.clientSocket);
         } catch (IOException e) {
-            e.printStackTrace();
+            if (!clientSocket.isClosed())
+                e.printStackTrace();
+        } finally {
+            // send the client to server to be disconnected
+            server.removeClient(clientSocket);
         }
     }
 }
