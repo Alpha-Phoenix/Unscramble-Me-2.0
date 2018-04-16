@@ -39,7 +39,10 @@ public class ClientWriterThread implements Runnable {
         try (PrintWriter socketWriter = new PrintWriter(serverSocket.getOutputStream(), true)) {
             keyboardReader = new BufferedReader(new InputStreamReader(System.in));
             String line;
-            while ((line = keyboardReader.readLine()) != null) socketWriter.println(line);
+            while ((line = keyboardReader.readLine()) != null) {
+                if (!line.equals(""))
+                    socketWriter.println(line);
+            }
         } catch (IOException e) {
             if (!serverSocket.isClosed())
                 e.printStackTrace();

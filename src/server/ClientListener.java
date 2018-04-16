@@ -43,6 +43,8 @@ public class ClientListener implements Runnable {
      * */
     private final static Logger LOGGER = Logger.getLogger(ClientListener.class.getName());
 
+    private Room clientRoom;
+
     /**
      * Instantiate a new {@link ClientListener} with a given client socket.
      *
@@ -59,6 +61,14 @@ public class ClientListener implements Runnable {
             LOGGER.log(Level.SEVERE, "Failed on retrieve data from clientSocket: {0}", e);
             e.printStackTrace();
         }
+    }
+
+    Room getClientRoom() {
+        return clientRoom;
+    }
+
+    void setClientRoom(Room clientRoom) {
+        this.clientRoom = clientRoom;
     }
 
     PrintWriter getWriter() {
@@ -80,7 +90,7 @@ public class ClientListener implements Runnable {
                 // send received message to the server
                 LOGGER.log(Level.INFO, "Message received!\n\t   From: {0}\n\tMessage: {1}\n",
                         new Object[]{clientSocket, message});
-                server.broadcast(message, this);
+                clientRoom.broadcast(message, this);
             }
         } catch (IOException e) {
             if (!clientSocket.isClosed()) {

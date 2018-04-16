@@ -7,8 +7,11 @@ import java.util.logging.Logger;
 
 public class GameClient {
     public static void main(String[] args) {
-        final String serverAddress = args.length == 2 ? args[0] : "localhost";
-        final int port = args.length == 2 ? Integer.parseInt(args[1]) : 5000;
+        final String serverAddress =
+                args.length == 2 ? args[0] : "localhost";
+        final int port =
+                args.length == 2 ? Integer.parseInt(args[1]) : 5000;
+
         final Logger LOGGER = Logger.getLogger(GameClient.class.getName());
 
         try {
