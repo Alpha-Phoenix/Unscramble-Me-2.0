@@ -50,7 +50,7 @@ public class GameServer implements Runnable {
      * Instantiates a new {@link GameServer} with a given port number.
      * @param port the port number used to start the server.
      * */
-    public GameServer(int port) {
+    private GameServer(int port) {
         this();
         this.port = port;
     }
@@ -65,21 +65,8 @@ public class GameServer implements Runnable {
         shutdown();
     }
 
-    /**
-     * Start the server and listen for clients connections requests.
-     * */
-    public void start () {
-        try {
-            LOGGER.log(Level.INFO, "Trying to start the server...\n");
-            serverSocket = new ServerSocket(this.port);
-            final String ip = InetAddress.getLocalHost().getHostAddress();
-            LOGGER.log(Level.INFO, "Server started!\n\tPort: {0}\n\t  IP: {1}\n", new Object[] {port, ip});
-            LOGGER.log(Level.INFO, "Press Ctrl-D to shutdown the server!\n");
-            waitForConnections();
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Failed to initialize the server! {0}\n", e.getMessage());
-            e.printStackTrace();
-        }
+    public static void main(String[] args) {
+        new GameServer(args.length == 1 ? Integer.parseInt(args[0]) : 5000).start();
     }
 
     /**
@@ -121,11 +108,8 @@ public class GameServer implements Runnable {
     private void shutdown () {
         try {
             LOGGER.log(Level.INFO, "Trying to shutdown the server...\n");
-
             while (clientListeners.iterator().hasNext()) removeClient(clientListeners.iterator().next());
-
             serverSocket.close();
-
             LOGGER.log(Level.INFO, "Server successfully shut down!\n");
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Failed to shutdown the server! {0}\n", e.getMessage());
@@ -168,6 +152,23 @@ public class GameServer implements Runnable {
                 broadcast(String.format("Client disconnected! %s\n", clientListener.getClientSocket()), null);
             }
         } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Start the server and listen for clients connections requests.
+     */
+    private void start() {
+        try {
+            LOGGER.log(Level.INFO, "Trying to start the server...\n");
+            serverSocket = new ServerSocket(this.port);
+            final String ip = InetAddress.getLocalHost().getHostAddress();
+            LOGGER.log(Level.INFO, "Server started!\n\tPort: {0}\n\t  IP: {1}\n", new Object[]{port, ip});
+            LOGGER.log(Level.INFO, "Press Ctrl-D to shutdown the server!\n");
+            waitForConnections();
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Failed to initialize the server! {0}\n", e.getMessage());
             e.printStackTrace();
         }
     }
