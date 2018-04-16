@@ -14,10 +14,13 @@ public class GameClient {
         try {
             Socket serverSocket = new Socket(serverAddress, port);
             LOGGER.log(Level.INFO, "Connection successful! {0}\n", serverSocket);
+            Thread.sleep(1000);
             new Thread(new ClientWriterThread(serverSocket)).start();
             new Thread(new ClientReaderThread(serverSocket)).start();
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE,"Failed to connect with the server\n", e);
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
