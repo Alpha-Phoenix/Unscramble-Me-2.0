@@ -121,11 +121,8 @@ public class GameServer implements Runnable {
     private void shutdown () {
         try {
             LOGGER.log(Level.INFO, "Trying to shutdown the server...\n");
-
             while (clientListeners.iterator().hasNext()) removeClient(clientListeners.iterator().next());
-
             serverSocket.close();
-
             LOGGER.log(Level.INFO, "Server successfully shut down!\n");
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Failed to shutdown the server! {0}\n", e.getMessage());
