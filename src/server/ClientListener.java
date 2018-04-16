@@ -5,6 +5,7 @@ import com.sun.istack.internal.NotNull;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,6 +29,16 @@ public class ClientListener implements Runnable {
     private GameServer server;
 
     /**
+     * Reader used to read messages sent by the client
+     * */
+    private BufferedReader reader;
+
+    /**
+     * Writer used to send messages to the client
+     * */
+    private PrintWriter writer;
+
+    /**
      * A {@link Logger} used to print messages for debug purpose.
      * */
     private final static Logger LOGGER = Logger.getLogger(ClientListener.class.getName());
@@ -41,6 +52,21 @@ public class ClientListener implements Runnable {
     ClientListener(@NotNull Socket clientSocket, @NotNull GameServer server) {
         this.clientSocket = clientSocket;
         this.server = server;
+        try {
+            this.writer = new PrintWriter(clientSocket.getOutputStream(), true);
+            this.reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Failed on retrieve data from clientSocket: {0}", e);
+            e.printStackTrace();
+        }
+    }
+
+    PrintWriter getWriter() {
+        return writer;
+    }
+
+    Socket getClientSocket() {
+        return clientSocket;
     }
 
     /**
@@ -48,20 +74,22 @@ public class ClientListener implements Runnable {
      * */
     @Override
     public void run() {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
+        try {
             String message;
             while ((message = reader.readLine()) != null) {
                 // send received message to the server
                 LOGGER.log(Level.INFO, "Message received!\n\t   From: {0}\n\tMessage: {1}\n",
                         new Object[]{clientSocket, message});
-                server.broadcast(message, clientSocket);
+                server.broadcast(message, this);
             }
         } catch (IOException e) {
-            if (!clientSocket.isClosed())
+            if (!clientSocket.isClosed()) {
+                LOGGER.log(Level.SEVERE, "Failed on read client message: {0}", e);
                 e.printStackTrace();
+            }
         } finally {
             // send the client to server to be disconnected
-            server.removeClient(clientSocket);
+            server.removeClient(this);
         }
     }
 }

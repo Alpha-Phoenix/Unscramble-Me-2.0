@@ -7,7 +7,6 @@ package server;
 import com.sun.istack.internal.NotNull;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -39,12 +38,12 @@ public class GameServer implements Runnable {
     private final static Logger LOGGER = Logger.getLogger(GameServer.class.getName());
 
     /**
-     * A hash set to store the clients sockets
+     * A hash set to store the connected clients
      * */
-    private HashSet<Socket> clientsSockets;
+    private HashSet<ClientListener> clientListeners;
 
     private GameServer() {
-        clientsSockets = new HashSet<>();
+        clientListeners = new HashSet<>();
     }
 
     /**
@@ -110,8 +109,10 @@ public class GameServer implements Runnable {
      * @param clientSocket the client socket to delegate.
      * */
     private void allocateClient(@NotNull Socket clientSocket) {
-        clientsSockets.add(clientSocket);
-        new Thread(new ClientListener(clientSocket, this)).start();
+        ClientListener listener = new ClientListener(clientSocket, this);
+        clientListeners.add(listener);
+        broadcast(String.format("New user connected! %s\n", clientSocket), listener);
+        new Thread(listener).start();
     }
 
     /**
@@ -121,8 +122,7 @@ public class GameServer implements Runnable {
         try {
             LOGGER.log(Level.INFO, "Trying to shutdown the server...\n");
 
-            // TODO Clear resources
-            for (Socket soc : clientsSockets) removeClient(soc);
+            while (clientListeners.iterator().hasNext()) removeClient(clientListeners.iterator().next());
 
             serverSocket.close();
 
@@ -136,14 +136,10 @@ public class GameServer implements Runnable {
     /**
      * Send a message to a single client.
      * @param message the message to be sent.
-     * @param clientSocket the socket of the client that will receive the message
+     * @param clientListener the client listener that will receive the message
      * */
-    private void sendMessage (@NotNull Object message, @NotNull Socket clientSocket) {
-        try (PrintWriter writer = new PrintWriter(clientSocket.getOutputStream(), true)) {
-            writer.println(message);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    private void sendMessage (@NotNull Object message, @NotNull ClientListener clientListener) {
+        clientListener.getWriter().println(message);
     }
 
     /**
@@ -151,24 +147,26 @@ public class GameServer implements Runnable {
      * @param message           the message to be sent.
      * @param excludedClient    the client that won't receive the message.
      * */
-    void broadcast (@NotNull Object message, @NotNull Socket excludedClient) {
-        for (Socket client : clientsSockets) {
-            if (excludedClient == client)
+    void broadcast (@NotNull Object message, @NotNull ClientListener excludedClient) {
+        for (ClientListener clientListener : clientListeners) {
+            if (excludedClient == clientListener)
                 continue;
-            sendMessage(message, client);
+            sendMessage(message, clientListener);
         }
     }
 
     /**
      * Remove the given client from server.
-     * @param clientSocket the client to be removed.
+     * @param clientListener the client to be removed.
      * */
-    void removeClient (@NotNull Socket clientSocket) {
+    void removeClient (@NotNull ClientListener clientListener) {
         try {
-            clientSocket.close();
-            clientsSockets.remove(clientSocket);
-            LOGGER.log(Level.INFO, "Client removed! {0}\n", clientSocket);
-            // TODO broadcast the client disconnection
+            clientListener.getWriter().println("You're now disconnected to the server! Press Ctrl-D to exit...");
+            clientListener.getClientSocket().close();
+            if(clientListeners.remove(clientListener)) {
+                LOGGER.log(Level.INFO, "Client disconnected! {0}\n", clientListener.getClientSocket());
+                broadcast(String.format("Client disconnected! %s\n", clientListener.getClientSocket()), null);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
