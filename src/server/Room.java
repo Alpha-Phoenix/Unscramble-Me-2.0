@@ -22,6 +22,11 @@ final class Room {
      */
     private static final ArrayList<Room> rooms;
 
+    /**
+     * The unscrambled word that users need to be guess
+     */
+    private String[] unscrambledWord;
+
     static {
         CAPACITY = 2;
         MAX_ROOMS = 100;
@@ -53,12 +58,21 @@ final class Room {
         }
     }
 
+    /**
+     * Allocate a client into a game room
+     */
     static void allocateListener(@NotNull ClientListener listener) {
         Room lastRoom = getRoom();
         lastRoom.listeners.add(listener);
         listener.setClientRoom(lastRoom);
         if (lastRoom.listeners.size() == CAPACITY) {
-            // TODO start the game
+            lastRoom.setWord(WordScrambler.getRandomWord());
+            try {
+                // Wait to sync output
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -68,7 +82,7 @@ final class Room {
      * @param message        the message to be sent.
      * @param excludedClient the client that won't receive the message.
      */
-    void broadcast(@NotNull Object message, @NotNull ClientListener excludedClient) {
+    void broadcast(@NotNull Object message, ClientListener excludedClient) {
         for (ClientListener clientListener : listeners) {
             if (excludedClient == clientListener)
                 continue;
@@ -82,7 +96,31 @@ final class Room {
      * @param message        the message to be sent.
      * @param clientListener the client listener that will receive the message
      */
-    private void sendMessage(@NotNull Object message, @NotNull ClientListener clientListener) {
+    void sendMessage(@NotNull Object message, @NotNull ClientListener clientListener) {
         clientListener.getWriter().println(message);
+    }
+
+    String getWord() {
+        return unscrambledWord[0];
+    }
+
+    private void setWord(String[] randomWord) {
+        unscrambledWord = randomWord;
+        broadcast(String.format("Word to unscramble: \"%s\"", unscrambledWord[1]), null);
+    }
+
+    void removeListener(ClientListener listener) {
+        listeners.remove(listener);
+    }
+
+    /**
+     * Terminates the game running in current room
+     */
+    void destroy() {
+        rooms.remove(this);
+        for (ClientListener listener : listeners) {
+            listener.getServer().removeClient(listener);
+        }
+
     }
 }

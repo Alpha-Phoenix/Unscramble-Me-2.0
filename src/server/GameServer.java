@@ -141,6 +141,8 @@ public class GameServer implements Runnable {
         try {
             clientListener.getWriter().println("You're now disconnected to the server! Press Ctrl-D to exit...");
             clientListener.getClientSocket().close();
+            // Remove this listener from the room
+            clientListener.getClientRoom().removeListener(clientListener);
             if (clientListeners.remove(clientListener)) {
                 LOGGER.log(Level.INFO, "Client disconnected! {0}\n", clientListener.getClientSocket());
                 clientListener.getClientRoom().broadcast(String.format("Client disconnected! %s\n", clientListener.getClientSocket()), null);

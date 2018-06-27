@@ -79,6 +79,10 @@ public class ClientListener implements Runnable {
         return clientSocket;
     }
 
+    GameServer getServer() {
+        return server;
+    }
+
     /**
      * Listen for client messages and send it to the server.
      * */
@@ -88,9 +92,16 @@ public class ClientListener implements Runnable {
             String message;
             while ((message = reader.readLine()) != null) {
                 // send received message to the server
-                LOGGER.log(Level.INFO, "Message received!\n\t   From: {0}\n\tMessage: {1}\n",
-                        new Object[]{clientSocket, message});
-                clientRoom.broadcast(message, this);
+                LOGGER.log(Level.INFO, "Message received!\n\t   From: {0}\n\tMessage: {1}\n", new Object[]{clientSocket, message});
+
+                String word = clientRoom.getWord();
+                if (word != null && word.equals(message)) {
+                    clientRoom.broadcast(String.format("Player %s wins: %s", clientSocket, message), null);
+                    clientRoom.destroy();
+                } else {
+                    clientRoom.broadcast(String.format("Client %s missed the guess: %s", clientSocket, message), this);
+                    clientRoom.sendMessage("Wrong! Try again...", this);
+                }
             }
         } catch (IOException e) {
             if (!clientSocket.isClosed()) {
