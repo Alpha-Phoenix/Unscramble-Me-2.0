@@ -45,6 +45,8 @@ public class ClientListener implements Runnable {
 
     private Room clientRoom;
 
+    private int remainingGuesses;
+
     /**
      * Instantiate a new {@link ClientListener} with a given client socket.
      *
@@ -54,6 +56,7 @@ public class ClientListener implements Runnable {
     ClientListener(@NotNull Socket clientSocket, @NotNull GameServer server) {
         this.clientSocket = clientSocket;
         this.server = server;
+        this.remainingGuesses = 5;
         try {
             this.writer = new PrintWriter(clientSocket.getOutputStream(), true);
             this.reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
@@ -101,6 +104,13 @@ public class ClientListener implements Runnable {
                 } else {
                     clientRoom.broadcast(String.format("Client %s missed the guess: %s", clientSocket, message), this);
                     clientRoom.sendMessage("Wrong! Try again...", this);
+                    this.remainingGuesses--;
+                    if (this.remainingGuesses == 0) {
+                        clientRoom.sendMessage("Your attempts have ended!", this);
+                        clientRoom.removeListener(this);
+                        server.removeClient(this);
+                    }
+                    clientRoom.sendMessage("Remaining guesses: " + remainingGuesses, this);
                 }
             }
         } catch (IOException e) {
